@@ -1,0 +1,4 @@
+pour lancer mongo:
+
+	->s'assurer d'avoir bien les dossiers data/db et data/logs existants
+	->lancer mongod -config config/mongod.cfg

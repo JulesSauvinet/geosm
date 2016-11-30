@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoSM</title>
+
+    <!-- Feuilles CSS-->
+    <link href="css/main.css" rel="stylesheet">
+    <!--TODO favicon-->
+    <link rel="icon" type="image/png" href="images/geosm.png"/>
+
+    <!-- Scripts javascript -->
+    <script src="bower_components/jquery/dist/jquery.min.js"></script>
+    <script src="bower_components/underscore/underscore-min.js"></script>
+    <script src="bower_components/backbone/backbone-min.js"></script>
+    <script src="bower_components/moment/min/moment-with-locales.js"></script>
+
+    <script src="js/utils.js"></script>
+    <script src="js/i18n.js"></script>
+    <script src="js/libs.js"></script>
+
+    <script>
+        moment.locale('fr');
+    </script>
+</head>
+
+<body><!-- Peuplé dynamiquement --></body>
+
+<!--
+========================
+TEMPLATE - Base layout
+========================
+-->
+<script type="text/template" id="tpl-base">
+
+    <div class="main-title">
+        <h1>
+            {{ i18n('app_name') }}
+        </h1>
+        <div class="author">
+            {{ i18n('app_credits') }}
+        </div>
+    </div>
+
+    <div class="main-container">
+
+        <!-- Champ texte de recherche-->
+        <div id="search-container"></div>
+
+        <!-- Champ texte de recherche-->
+        <div id="loader-container"></div>
+
+        <!-- Conteneur de la carte-->
+        <div id="map-container"></div>
+
+        <!-- Conteneur des résultats de recherche -->
+        <div id="results-pane-container"></div>
+
+        <!-- Conteneur des informations d'une entité -->
+        <div id="entity-info-container"></div>
+
+        <!-- Conteneur du merger -->
+        <div id="merger"></div>
+
+        <!-- Affichage des merges faits automatiquement -->
+        <div id="auto-merges"></div>
+
+        <!-- Bouton de recherche-->
+        <a href="#search" class="float-search-btn" title="Faire une nouvelle recherche">
+            <img src="/images/search.png" alt="Search">
+        </a>
+    </div>
+</script>
+
+<!--
+========================
+TEMPLATE - Result Pane
+========================
+-->
+<script type="text/template" id="tpl-results-pane">
+    <div class="results-pane-head">
+        <img src="{{ imageUrl }}" alt="{{ title }}">
+        {{ title }}
+
+        <span class="results-count">
+            |
+        <%
+            if(results_count == 1) {
+             print(results_count + ' ' + i18n('result').toLowerCase());
+            } else if(results_count > 1) {
+                print(results_count + ' ' + i18n('results').toLowerCase());
+            } else {
+                print(i18n('no_result'));
+            }
+        %>
+        </span>
+    </div>
+
+    <% if(results_count) { %>
+    <ul class="content"></ul>
+    <% } %>
+</script>
+
+<!-- Une entrée de résultat -->
+<script type="text/template" id="tpl-result-entry">
+    <span class="title">
+        {{ entity.name }}
+    </span>
+</script>
+
+
+<!--
+========================
+TEMPLATE - Map
+========================
+-->
+<script type="text/template" id="tpl-map">
+    <div id="map"></div>
+</script>
+
+<!--
+========================
+TEMPLATE - Entity Info
+========================
+-->
+<script type="text/template" id="tpl-entity-info">
+
+    <h2>{{ i18n('infoview_title') }}</h2>
+
+    <ul class="content">
+        <% for(var k in entityGeosm) { %>
+        <li><b>{{ i18n('attr_' + k) }}</b> : {{ entityGeosm[k] }}</li>
+        <% } %>
+    </ul>
+
+    <ul class="content">
+        <% for(var k in entityOsm) { %>
+        <% var translated = i18n('attr_' + k, true) %>
+        <li><b>{{ translated || k }}</b> : {{ entityOsm[k] }}</li>
+        <% } %>
+    </ul>
+
+    <% if (entityGeo && entityOsm) {%>
+    <hr>
+    <% } %>
+
+    <ul class="content">
+        <% for(var k in entityGeo) { %>
+        <li><b>{{ i18n('attr_' + k) }}</b> : {{ entityGeo[k] }}</li>
+        <% } %>
+    </ul>
+
+    <% if (entityGeo && entityOsm) {%>
+    <hr>
+    <a href="#merger" class="merge-entities-btn btn blue">
+        {{ i18n('infoview_btn_merge') }}
+    </a>
+    <% } %>
+
+    <% if (entityGeosm) {%>
+    <hr>
+    <button class="rollback-btn btn red">
+        {{ i18n('infoview_btn_rollack') }}
+    </button>
+    <% } %>
+
+</script>
+
+<!--
+========================
+TEMPLATE - Merger
+========================
+-->
+<script type="text/template" id="tpl-merger">
+    <h1 class="merger-title">{{ i18n('merger_title') }}</h1>
+
+    <form action="#merger" class="merger-form">
+        <table class="merger-table">
+            <thead>
+            <tr>
+                <th style="width: 200px">{{ i18n('merger_col_attribute') }}</th>
+                <th>{{ i18n('merger_col_geonames') }}</th>
+                <th>{{ i18n('merger_col_results') }}</th>
+                <th>{{ i18n('merger_col_osm') }}</th>
+            </tr>
+            </thead>
+            <tbody>
+
+            <% for(var k in attrs) { %>
+            <tr data-attr="{{ k }}">
+                <td class="merger-td-attr">{{ i18n('attr_' + k) }}</td>
+                <td class="merger-td-geo {{ ite(attrs[k].geo.value == null, 'empty') }}">
+                    <% if(attrs[k].geo.value != null) { %>
+                    <div class="merger-radio-btn">
+                        <input type="radio" name="attr[{{ k }}][source]" value="geo"
+                               {{ ite(attrs[k].geo.selected, 'checked') }}>
+                    </div>
+                    <div class="merger-field-value">{{ attrs[k].geo.value }}</div>
+                    <% } else { %>
+                    <div class="meger-empty-cell">
+                        &#8212;
+                    </div>
+                    <% } %>
+                </td>
+                <td class="merger-td-result">
+                    <div class="merger-radio-btn">
+                        <input type="radio" name="attr[{{ k }}][source]" value="custom"
+                               class="merger-radio-user" {{ ite(attrs[k].user.selected, 'checked') }}>
+                    </div>
+                    <div class="merger-field-value">
+                        <textarea placeholder="{{ i18n('merger_custom_value_placeholder') }}" rows="1"
+                                  name="attr[{{ k }}][value]"
+                                  class="merger-result-input"></textarea>
+                        <input type="hidden" name="attr[{{ k }}][value]" class="merger-attr-value-input">
+                    </div>
+                </td>
+                <td class="merger-td-osm {{ ite(attrs[k].osm.value == null, 'empty') }}">
+                    <% if(attrs[k].osm.value != null) { %>
+                    <div class="merger-radio-btn">
+                        <input type="radio" name="attr[{{ k }}][source]" value="osm"
+                               {{ ite(attrs[k].osm.selected, 'checked') }}>
+                    </div>
+                    <div class="merger-field-value">{{ attrs[k].osm.value }}</div>
+                    <% } else { %>
+                    <div class="meger-empty-cell">
+                        &#8212;
+                    </div>
+                    <% } %>
+                </td>
+            </tr>
+            <% } %>
+            </tbody>
+        </table>
+
+        <div>
+
+        </div>
+        <div class="merger-group-btn">
+            <button class="merger-add-attr-btn">
+                + {{ i18n('merge_add_attr') }}
+            </button>
+
+            <button class="merger-cancel-btn">{{ i18n('cancel') }}</button>
+            <button class="merger-save-btn" type="submit">{{ i18n('save') }}</button>
+        </div>
+    </form>
+
+</script>
+
+<!--
+========================
+TEMPLATE - Search input
+========================
+-->
+<script type="text/template" id="tpl-search">
+    <input type="text" name="search" id="search-input"
+           placeholder="{{ i18n('search_input_placeholder') }}">
+
+    <div class="choice-merge-radio-btns">
+        {{ i18n('search_align_entity') }} :
+        <label>
+            <input type="radio" name="radio-merge"
+                   class="choice-merge-radio-btn"
+                   value="manuel" checked> {{ i18n('search_merge_manual_radio') }}
+        </label>
+        <label>
+            <input type="radio" name="radio-merge" class="choice-merge-radio-btn"
+                   value="automatique"> {{ i18n('search_merge_auto_radio') }}
+        </label>
+    </div>
+
+    <a class="merged-entities-btn"
+       href="#merged">{{ i18n('show_merged_entities_btn') }}</a>
+</script>
+
+
+<!--
+========================
+TEMPLATE - Loader
+========================
+-->
+<script type="text/template" id="tpl-loader">
+    <div class="spinner">
+        <div class="bounce1"></div>
+        <div class="bounce2"></div>
+        <div class="bounce3"></div>
+    </div>
+</script>
+
+
+<!-- Objets backbone de l'application -->
+<script src="js/config.js"></script>
+<script src="js/views/Merger.js"></script>
+<script src="js/models/Entity.js"></script>
+<script src="js/models/Data.js"></script>
+<script src="js/views/Base.js"></script>
+<script src="js/views/Search.js"></script>
+<script src="js/views/EntityInfo.js"></script>
+<script src="js/views/Map.js"></script>
+<script src="js/views/ResultsPane.js"></script>
+<script src="js/routers/router.js"></script>
+<script src="js/app.js"></script>
+
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBbh7Hblj9X452vxGCLKQ8z4IAWkh729BA&callback=app.mapView.initMap"></script>
+</html>

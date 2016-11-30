@@ -1,0 +1,36 @@
+TODO EQUIV DE TYPE
+
+
+- Rajouter un marqueur pour tous les résultats (avec couleur différent ou numéro) - izi
+
+- Fonction de pertinence entre deux entités (établir les critères pour le score)
+
+- Sauvegarder un ensemble de type, puis si le nom type identifié dans une requête utilisateur
+   => on supprime le nom de la requête puis on lance la requête
+sur l'API en spécifiant le type.
+  -> Informer l'utilisateur du match de type et lui proposer de ne pas la faire
+  -> ou choix direct de l'utilisateur. 
+
+- Géolocalisation de l'utilisateur (soit l'appliqué en fonction du type, soit checkbox pour (dés)activer
+
+- Base de donnée Mongo: R(query, entity_merged) entity_merged contient geonames_id et osm_id
+
+- Autocomplétion
+
+- Formulaire pour enregistrer le match
+
+- Page de consultation des matchs déjà effectués
+
+- fonction d'auto apprentissage pour des merges automatiques
+  => Sauvegarder des stats au moment des merges quelle source a été choisis pour un attribut
+  => Amélioration: différencier selon le type de l'objet ?
+
+- Ajouter un bon pour faire une fusion automatique de deux entités
+
+- Lors d'une recherche, vérifier dans la base des merges si un merge a été
+  fait sur une des entités de OSM ou GEO. Si oui, supprimé des résultats de OSM ou GEO
+  et éventuellement les afficher de manière différencier
+
+- Ajouter un bouton pour sélection de la langue
+
+- Fusion des entités de Géonames
